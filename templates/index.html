@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rain Monitoring System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1 style="margin-bottom: 0;">RAIN MONITORING</h1>
+                <span style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.2); color: var(--accent-color); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 800; letter-spacing: 1px;">LIVE</span>
+            </div>
+            
+            <div id="status-container" class="rain-animation" style="display: none;">
+                <div class="drop"></div>
+                <div class="drop"></div>
+                <div class="drop"></div>
+            </div>
+
+            <div id="badge" class="status-badge">Checking...</div>
+            
+            <div class="label" style="margin-top: 1rem;">SENSOR RAW VALUE</div>
+            <div id="value" class="value-display">---</div>
+            
+            <div class="serial-info">
+                <span><span id="serial-dot" class="dot"></span> PORT: <b id="port-info">COM6</b></span>
+                <span>BAUD: <b>9600</b></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function updateDashboard() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                
+                const badge = document.getElementById('badge');
+                const valueEl = document.getElementById('value');
+                const rainAnim = document.getElementById('status-container');
+                const serialDot = document.getElementById('serial-dot');
+                const portInfo = document.getElementById('port-info');
+
+                // Add pulse effect if value changed
+                if (valueEl.innerText !== data.value && data.value !== "---") {
+                    valueEl.classList.remove('pulse');
+                    void valueEl.offsetWidth; // trigger reflow
+                    valueEl.classList.add('pulse');
+                }
+
+                valueEl.innerText = data.value;
+                portInfo.innerText = data.port;
+
+                if (data.connected) {
+                    serialDot.className = 'dot dot-online';
+                } else {
+                    serialDot.className = 'dot dot-offline';
+                }
+
+                if (data.status.toLowerCase().includes('no rain')) {
+                    badge.innerText = "Condition: Dry";
+                    badge.className = "status-badge status-dry";
+                    rainAnim.style.display = 'none';
+                } else if (data.status.toLowerCase().includes('rain')) {
+                    badge.innerText = "Condition: Raining";
+                    badge.className = "status-badge status-rain";
+                    rainAnim.style.display = 'flex';
+                } else {
+                    badge.innerText = data.status || "Unknown";
+                    badge.className = "status-badge";
+                    rainAnim.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error("Failed to fetch data:", error);
+            }
+        }
+
+        setInterval(updateDashboard, 500);
+        updateDashboard();
+    </script>
+</body>
+</html>
